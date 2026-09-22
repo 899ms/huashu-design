@@ -211,13 +211,13 @@ pptx.layout = 'LAYOUT_WIDE';  // 13.333 × 7.5 inch, 无需自定义
 
 | 错误信息 | 原因 | 修复方法 |
 |---------|------|---------|
-| `DIV element contains unwrapped text "XXX"` | div 里有裸文字 | 把文字包进 `<p>` 或 `<h1>`-`<h6>` |
-| `CSS gradients are not supported` | 用了 linear/radial-gradient | 改为纯色，或用 flex 子元素分段 |
-| `Text element <p> has background` | `<p>` 标签加了背景色 | 外套 `<div>` 承载背景，`<p>` 只写文字 |
-| `Background images on DIV elements are not supported` | div 用了 background-image | 改为 `<img>` 标签 |
-| `HTML content overflows body by Xpt vertically` | 内容超出 540pt | 减少内容或缩小字号，或 `overflow: hidden` 截断 |
-| `HTML dimensions don't match presentation layout` | body 尺寸和 pres layout 对不上 | body 用 `960pt × 540pt` 配 `LAYOUT_WIDE`；或 defineLayout 自定义尺寸 |
-| `Text box "XXX" ends too close to bottom edge` | 大字号 `<p>` 距离 body 底边 < 0.5 inch | 往上挪，留足下边距；PPT 底部本身就会被遮住一部分 |
+| `<div> 里直接写了文字「XXX」` | div 里有裸文字 | 把文字包进 `<p>` 或 `<h1>`-`<h6>` |
+| `<div> 背景不能用 CSS 渐变` | 用了 linear/radial-gradient | 改为纯色，或用 flex 子元素分段 |
+| `文字标签 <p> 上设置了 background…` | `<p>` 标签加了背景色 | 外套 `<div>` 承载背景，`<p>` 只写文字 |
+| `<div> 不能用 background-image` | div 用了 background-image | 改为 `<img>` 标签 |
+| `内容纵向超出页面 Xpt` | 内容超出 540pt | 减少内容或缩小字号，或 `overflow: hidden` 截断 |
+| `页面尺寸不一致` | body 尺寸和 pres layout 对不上 | body 用 `960pt × 540pt` 配 `LAYOUT_WIDE`；或 defineLayout 自定义尺寸 |
+| `文本框「XXX」离页面底边只有…` | 大字号 `<p>` 距离 body 底边 < 0.5 inch | 往上挪，留足下边距；PPT 底部本身就会被遮住一部分 |
 
 ---
 

@@ -1,8 +1,7 @@
 // Copyright (c) 2026 alchaincyf (花叔). MIT License.
 //
-// 独立实现：按 `2026-09-22-夜班/html2pptx净室/SPEC.md` 描述的输入/输出/可观察行为，
-// 从零编写。没有参考、没有复用任何第三方 html2pptx 的源码——只用到 Playwright 与
-// pptxgenjs 这两个公开第三方库自身的文档/类型定义。
+// 独立实现：按一份只描述输入、输出和可观察行为的规格从零编写，实现过程中没有
+// 查看其他 html2pptx 的源码。依赖 Playwright 与 pptxgenjs 两个公开库。
 //
 // 职责：把一页 960pt×540pt（约定俗成，实际以 body 尺寸为准）的 HTML，用 Playwright
 // 起一个真实 Chromium 打开、量出每个元素的渲染结果（位置/尺寸/computed style），
@@ -343,7 +342,7 @@ function extractPageDataInBrowser() {
     if (rect.w === 0 || rect.h === 0) {
       const dim = rect.w === 0 ? 'width' : 'height';
       const id = el.id || 'unnamed';
-      errors.push(`Placeholder element (id: ${id}) has zero ${dim}. Check its layout CSS.`);
+      errors.push(`占位区 #${id} 渲染出来的${dim === 'width' ? '宽度' : '高度'}是 0，检查它的 CSS 布局`);
       return;
     }
     const id = el.id || 'placeholder-' + placeholders.length;
@@ -393,7 +392,7 @@ function extractPageDataInBrowser() {
       .trim();
     if (rawDirectText) {
       errors.push(
-        `DIV element contains unwrapped text "${truncate(rawDirectText, 50)}". All text must be wrapped in <p>, <h1>-<h6>, <ul>, or <ol> tags to appear in PowerPoint.`
+        `<div> 里直接写了文字「${truncate(rawDirectText, 50)}」，PPT 里不会出现——请用 <p>、<h1>-<h6>、<ul>/<ol> 包起来`
       );
     }
 
@@ -402,11 +401,11 @@ function extractPageDataInBrowser() {
     if (cs.backgroundImage && cs.backgroundImage !== 'none') {
       if (/gradient/i.test(cs.backgroundImage)) {
         errors.push(
-          'CSS gradients are not supported on DIV backgrounds. Use a solid background-color instead, or pre-render the gradient as a PNG and use <img>/slide.addImage().'
+          '<div> 背景不能用 CSS 渐变：换成纯色 background-color，或把渐变先导出成 PNG 再用 <img> / slide.addImage() 放上去'
         );
       } else {
         errors.push(
-          'Background images on DIV elements are not supported. Use an <img> tag, or use slide.addImage() to overlay the picture as its own layer.'
+          '<div> 不能用 background-image：图片请改成 <img> 标签，或用 slide.addImage() 单独叠一层'
         );
       }
       return;
@@ -629,7 +628,7 @@ function extractPageDataInBrowser() {
       const m = /^([•\-*▪▸○●◆◇■□])\s/.exec(collapsedFull);
       if (m) {
         errors.push(
-          `Manual bullet character detected in <${tag.toLowerCase()}>: "${truncate(collapsedFull, 20)}". Use <ul>/<ol> instead of typing bullet characters by hand.`
+          `<${tag.toLowerCase()}> 开头手打了项目符号「${truncate(collapsedFull, 20)}」——列表请用 <ul>/<ol>，不要自己打圆点`
         );
         return;
       }
@@ -748,7 +747,7 @@ function extractPageDataInBrowser() {
       const v = violationOf(el);
       if (v) {
         errors.push(
-          `Text element <${tag.toLowerCase()}> has ${v} — background/border/shadow are only supported on <div> elements, not on text tags like <${tag.toLowerCase()}>.`
+          `文字标签 <${tag.toLowerCase()}> 上设置了 ${v}：背景、边框、阴影只能加在 <div> 上，请在外面套一层 <div>`
         );
         continue;
       }
@@ -956,11 +955,11 @@ module.exports = async function html2pptx(htmlFile, pres, options) {
   const widthOverflowPx = Math.max(0, extraction.body.scrollWidth - extraction.body.width - 1);
   const heightOverflowPx = Math.max(0, extraction.body.scrollHeight - extraction.body.height - 1);
   if (widthOverflowPx > 0) {
-    errors.push(`HTML content overflows body by ${(widthOverflowPx * PT_PER_PX).toFixed(1)}pt horizontally`);
+    errors.push(`内容横向超出页面 ${(widthOverflowPx * PT_PER_PX).toFixed(1)}pt`);
   }
   if (heightOverflowPx > 0) {
     errors.push(
-      `HTML content overflows body by ${(heightOverflowPx * PT_PER_PX).toFixed(1)}pt vertically (Remember: leave 0.5" margin at bottom of slide)`
+      `内容纵向超出页面 ${(heightOverflowPx * PT_PER_PX).toFixed(1)}pt（页面底部要留出 0.5 英寸空白）`
     );
   }
 
@@ -972,7 +971,7 @@ module.exports = async function html2pptx(htmlFile, pres, options) {
     const bodyHIn = extraction.body.height * IN_PER_PX;
     if (Math.abs(bodyWIn - layoutWIn) > 0.1 || Math.abs(bodyHIn - layoutHIn) > 0.1) {
       errors.push(
-        `HTML dimensions (${bodyWIn.toFixed(1)}" × ${bodyHIn.toFixed(1)}") don't match presentation layout (${layoutWIn.toFixed(1)}" × ${layoutHIn.toFixed(1)}")`
+        `页面尺寸不一致：HTML 的 body 是 ${bodyWIn.toFixed(1)}×${bodyHIn.toFixed(1)} 英寸，PPT 版式是 ${layoutWIn.toFixed(1)}×${layoutHIn.toFixed(1)} 英寸`
       );
     }
     slideHeightIn = layoutHIn;
@@ -986,7 +985,7 @@ module.exports = async function html2pptx(htmlFile, pres, options) {
       const distance = slideHeightIn - (el.y + el.h);
       if (distance < 0.5) {
         const preview = previewTextOf(el).slice(0, 50);
-        errors.push(`Text box "${preview}" ends too close to bottom edge (${distance.toFixed(2)}" from bottom, minimum 0.5" required)`);
+        errors.push(`文本框「${preview}」离页面底边只有 ${distance.toFixed(2)} 英寸，至少要留 0.5 英寸`);
       }
     }
   }
@@ -996,7 +995,7 @@ module.exports = async function html2pptx(htmlFile, pres, options) {
     if (errors.length === 1) {
       message = errors[0];
     } else {
-      message = 'Multiple validation errors found:\n' + errors.map((e, i) => `  ${i + 1}. ${e}`).join('\n');
+      message = `发现 ${errors.length} 处问题：\n` + errors.map((e, i) => `  ${i + 1}. ${e}`).join('\n');
     }
     throw finalizeError(message);
   }
